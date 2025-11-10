@@ -18,8 +18,8 @@ void *xmalloc(size_t size){
 	}
 }
 
-void *xrealloc(void **p,size_t size){
-	void *n = realloc(*p,size);
+void *xrealloc(void *p,size_t size){
+	void *n = realloc(p,size);
 	if(n)
 		return n;
 	else {
@@ -55,16 +55,29 @@ myobj *create_number_obj(int number){
 	return o;
 }
 
-//used for string and symbol , len is strlen + 1 
+//used for string, len is strlen + 1 
 myobj *create_string_obj(char *s){
 	myobj *o = xmalloc(sizeof(*o));
 	int l = strlen(s);
 	o->type = STRING;
 	o->str.ptr = xmalloc(l+1);
+	memcpy(o->str.ptr, s, l);
 	o->str.ptr[l] = 0;
 	o->str.len = 0;
-	return 0;
+	return o;
 }
+
+myobj *create_symbol_obj(char *s){
+	myobj *o = xmalloc(sizeof(*o));
+	int l = strlen(s);
+	o->type = SYMBOL;
+	o->str.ptr = xmalloc(l+1);
+	memcpy(o->str.ptr, s, l);
+	o->str.ptr[l] = 0;
+	o->str.len = 0;
+	return o;
+}
+
 
 
 //#######################STACK################################
@@ -102,11 +115,10 @@ void push(stack *st, myobj *obj){
 	st->ptr[++st->top] = obj;
 }
 
-inline bool empty(stack *st){return st->top == -1 ? true : false;}
 
 myobj *pop(stack *st){
 
-	if(!empty(st)){
+	if(st->top != EMPITY ){
 		return st->ptr[st->top--];
 	}
 	return NULL;
@@ -114,7 +126,7 @@ myobj *pop(stack *st){
 }
 
 
-//parser struct and fun
+//#######################PARSER################################
 typedef struct {
 
 	char *prg; //pointer to program
@@ -123,15 +135,40 @@ typedef struct {
 
 }parser;
 
-
-
-//Return myobj pointer the freed up of the allocated object is in the main.
-myobj *compile(parser *p){
-
-	(void)p;
-
-	return NULL;
+//argument file name , return if the file exist, return the parser object else print error and return NULL
+parser *init_parser(const char *filename){
+	FILE *f = fopen(filename, "r");
+	if (!f)
+	{
+		perror("Error file not found\n");
+		return NULL;
+	}
+	
+	fseek(f, 0L, SEEK_END);
+	int len = ftell(f); 
+	fseek(f,0L, 0);
+	parser *par = xmalloc(sizeof(*par));	
+	par->prg = xmalloc(len+1);
+	fread(par->prg,len,1,f);
+	fclose(f);
+	par->prg[len] = 0;
+	par->size = len;
+	par->cp = par->prg;
+	
+	return par;
 }
+
+
+//Return stack pointer the freed up of the allocated object is in the main.
+stack *compile(parser *p){
+	stack *st = init();
+	puts(p->prg);
+	printf("%c\n",p->cp[0]);
+
+	return st;
+}
+
+
 
 int main(int argc, char const *argv[])
 {
@@ -139,31 +176,26 @@ int main(int argc, char const *argv[])
 		printf("No file!\n");
 	}else{
 		//get file
-		printf("File = %s", argv[1]);
-		FILE *f = fopen(argv[1], "r");
-		fseek(f, 0L, SEEK_END);
-		int len = ftell(f); 
-		fseek(f,0L, 0);
-		parser *par = malloc(sizeof(*par));	
-		par->prg = malloc(len+1);
-		fread(par->prg,len,1,f);
-		par->prg[len] = 0;
-		par->size = len;
-		par->cp = par->prg;
-		//printf("%s\n",par->prg);
-		fclose(f);
+		parser *par = init_parser(argv[1]);
+		if(!par)//check error
+			return 0;
 		//RUNTIME
-		stack *st = init();
+		stack *st;
+		st = compile(par);
+		if(!st){//some error occurr.
+			return NULL;
+		}
 
-		//myobj *obj = compile(st,par);
 		//compile
 		//exec
+
 		delete(st);
-		
+
 		free(par->prg);
+
 		free(par);
-		
 
 	}
+	
 	return 0;
 }
