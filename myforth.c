@@ -30,9 +30,9 @@ void *xrealloc(void *p,size_t size){
 }
 //#######################OBJECT TYPE################################
 //
-const char *math_symbol[] = {"+", "-", "/", "*"};
-typedef enum{PRINT,DUP,SWAP,IF,JMP}tsymbol; 
-const char *build_in[] = {"print","dup","swap","if","jmp"};
+#define SYMBOLS 11 //number of symbol
+typedef enum {SUM, MIN ,DIV ,MUL, PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT} tsymbol; 
+const char *build_in[] = {"+", "-", "/", "*", "print", "dup", "swap", "cr", "over", "rot", "drop", "emit", "."};
 enum{SYMBOL, NUMBER, STRING, VAR};
 typedef struct myobj myobj;
 typedef struct myobj{
@@ -117,6 +117,7 @@ void push(stack *st, myobj *obj){
 		st->ptr = xrealloc(st->ptr,sizeof(myobj *) * st->cap);
 	}
 	st->ptr[++st->top] = obj;
+
 }
 
 
@@ -200,10 +201,10 @@ tsymbol parse_symbol(parser *p){
 	
 	memcpy(symbol,startp,len);
 	symbol[len] = 0;
-	printf("\n\n symbol = %s\n\n",symbol);
+
 	//search symbol
 	tsymbol s = -1;
-	int build_in_count = 5; 
+	int build_in_count = SYMBOLS; 
     
 	//check symbol
     for(int i = 0; i < build_in_count; i++){
@@ -299,7 +300,33 @@ stack *compile(parser *p){
 	return st;
 }
 
+//utilities print stack 
+void print_stack(stack *st) { 
+	for (size_t i = 0; i <=  st->top ; i++) //for each element in the stack
+	{
+		printf("at position %ld I ", i);
+		switch (st->ptr[i]->type)
+		{
+		case STRING:
+			printf("found string = %s\n", st->ptr[i]->str.ptr);
+			break;
+		case NUMBER:
+			printf("found number = %d\n",st->ptr[i]->i);
+			break;
+		case SYMBOL:
+			printf("found symbol = %s\n",build_in[st->ptr[i]->i]);
+			break;
+		default:
+			break;
+		}
+	}
+}
 
+void exec(stack *st){
+
+	print_stack(st);// call utilities
+	
+}
 
 int main(int argc, char const *argv[])
 {
@@ -317,8 +344,8 @@ int main(int argc, char const *argv[])
 			return 0;
 		}
 
-		//compile
-		//exec
+		
+		exec(st);
 
 		delete(st);
 
