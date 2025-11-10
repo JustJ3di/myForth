@@ -10,8 +10,10 @@ typedef enum {false,true}bool;
 //wrapper malloc and realloc
 void *xmalloc(size_t size){
 	void *p = malloc(size);
-	if(p)
+	if(p) {
+		memset(p,0,size);
 		return p;
+	}
 	else {
 		perror("Error out of memory");
 		exit(EXIT_FAILURE);
@@ -31,7 +33,7 @@ void *xrealloc(void *p,size_t size){
 //#######################OBJECT TYPE################################
 //
 #define SYMBOLS 11 //number of symbol
-typedef enum {SUM, MIN ,DIV ,MUL, PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT} tsymbol; 
+typedef enum {SUM, SUB ,DIV ,MUL, PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT} tsymbol; 
 const char *build_in[] = {"+", "-", "/", "*", "print", "dup", "swap", "cr", "over", "rot", "drop", "emit", "."};
 enum{SYMBOL, NUMBER, STRING, VAR};
 typedef struct myobj myobj;
@@ -64,7 +66,7 @@ myobj *create_string_obj(char *s){
 	o->str.ptr = xmalloc(l+1);
 	memcpy(o->str.ptr, s, l);
 	o->str.ptr[l] = 0;
-	o->str.len = 0;
+	o->str.len = l;
 	return o;
 }
 
@@ -226,6 +228,7 @@ tsymbol parse_symbol(parser *p){
 
 }
 
+//parse string
 char *parse_string(parser *p) {
 
 	p->cp++; 
@@ -268,7 +271,7 @@ stack *compile(parser *p){
 	{	
 		if(p->cp[0]  == '\n')p->line++; //special case
 		//skipSpace
-		if(isspace(p->cp[0]))p->cp++;
+		while(isspace(p->cp[0]))p->cp++;
 		//parse number
 		if(isdigit(p->cp[0]) || (p->cp[1] !=  0 && p->cp[0]=='-' && isdigit(p->cp[1]))) {
 			
@@ -277,24 +280,44 @@ stack *compile(parser *p){
 			push(st,o);
 			//puts("PARSE NUMBER\n");
 
-		}else if(isalpha(p->cp[0])) {
+		}
+		if(isalpha(p->cp[0])) {
+			
 			tsymbol symbol = parse_symbol(p);
 			if(symbol == -1){ //error
 				return st;
 			}
+			
 			myobj *o = create_symbol_obj(symbol);
 			push(st,o);
 			
-		}else if(p->cp[0] == '\"') {
+		}
+		if(p->cp[0] == '.'){
+			
+			myobj *o = create_symbol_obj(DOT);
+			push(st, o);
+
+		}
+		if(p->cp[0] == '+'){
+
+			myobj *o = create_symbol_obj(SUM);
+			push(st,o);
+
+		}
+		if(p->cp[0] == '\"') {
+			
 			char *string = parse_string(p);
+			
 			if(string == NULL) {
 				return st;
 			}
+			
 			myobj *o = create_string_obj(string);
 			push(st,o);
 			free(string);
+
 		}
-			
+		p->cp++;
 	}
 	
 	return st;
@@ -322,9 +345,55 @@ void print_stack(stack *st) {
 	}
 }
 
+
+
 void exec(stack *st){
 
 	print_stack(st);// call utilities
+	int *data_stack = xmalloc(sizeof(*data_stack) *st->top);
+	memset(data_stack,0,st->top);
+	int sp = -1;
+	for (size_t i = 0; i <= st->top ; i++)
+	{
+		switch (st->ptr[i]->type)
+		{
+		case SYMBOL:
+			switch (st->ptr[i]->i)
+			{
+			case SUM:
+				int sum = data_stack[sp--] + data_stack[sp--];
+				data_stack[++sp] = sum;
+				break;
+			case SUB:
+				int a = data_stack[sp--];
+				int sub = data_stack[sp--] - a;
+				data_stack[++sp] = sub;	
+				break;
+			case DOT:
+				printf("%d",data_stack[sp--]);
+				break;
+			case DUP:
+				int dup = data_stack[sp--];
+				data_stack[++sp] = dup;
+				data_stack[++sp] = dup;
+				break;
+			case CR:
+				putchar('\n');
+				break;
+			
+			default:
+				break;
+			}
+			break;
+		
+		default:
+			data_stack[++sp] = st->ptr[i]->i;
+			break;
+		} 
+		
+	}
+		
+	free(data_stack);
 	
 }
 
