@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include<stdlib.h>
 #include<string.h>
-
+#include<ctype.h>
 
 //#######################UTILITIES################################
 
@@ -31,6 +31,7 @@ void *xrealloc(void *p,size_t size){
 //#######################OBJECT TYPE################################
 //
 const char *math_symbol[] = {"+", "-", "/", "*"};
+typedef enum{PRINT,DUP,SWAP,IF,JMP}tsymbol; 
 const char *build_in[] = {"print","dup","swap","if","jmp"};
 enum{SYMBOL, NUMBER, STRING, VAR};
 typedef struct myobj myobj;
@@ -67,14 +68,10 @@ myobj *create_string_obj(char *s){
 	return o;
 }
 
-myobj *create_symbol_obj(char *s){
+myobj *create_symbol_obj(tsymbol symbol){
 	myobj *o = xmalloc(sizeof(*o));
-	int l = strlen(s);
 	o->type = SYMBOL;
-	o->str.ptr = xmalloc(l+1);
-	memcpy(o->str.ptr, s, l);
-	o->str.ptr[l] = 0;
-	o->str.len = 0;
+	o->i = symbol;
 	return o;
 }
 
@@ -100,17 +97,24 @@ stack *init(){
 }
 
 void delete(stack *st){
-	free(st->ptr);
+	while(st->top != EMPITY){ 
+		if(st->ptr[st->top]->type == STRING)
+			free(st->ptr[st->top]->str.ptr);	
+		free(st->ptr[st->top--]); 
+	}
+		
+	free(st->ptr); 
+
 	free(st);
 
 }
 
 //stack operation push and pop
 void push(stack *st, myobj *obj){
-	if (st->top >= st->cap)
+	if (st->top + 1 >= st->cap)
 	{	
-		st->cap *= 2;
-		st = xrealloc(st,st->cap);
+		st->cap = st->cap * 2;
+		st->ptr = xrealloc(st->ptr,sizeof(myobj *) * st->cap);
 	}
 	st->ptr[++st->top] = obj;
 }
@@ -131,7 +135,9 @@ typedef struct {
 
 	char *prg; //pointer to program
 	size_t size; //file size
+	size_t line;
 	char *cp;//char tok
+
 
 }parser;
 
@@ -158,13 +164,138 @@ parser *init_parser(const char *filename){
 	return par;
 }
 
+int parse_number(parser *p){
+	char *startp = p->cp;
+	char* endp = NULL;  // This will point to end of string.
+	while(isdigit(p->cp[0]))p->cp++;
+
+	endp = p->cp;
+
+	size_t len = endp-startp;
+	char *number = malloc(len+1);
+	memcpy(number,startp,len);
+
+	number[len] = 0;
+
+	int i = atol(number);
+	free(number);
+	return i;
+		
+
+}
+
+
+//this funcion retun the symbol, symbol_type, it is a index of the array of the build in
+tsymbol parse_symbol(parser *p){
+
+	char *startp = p->cp;
+	char* endp = NULL;  // This will point to end of string.
+	while(isalpha(p->cp[0]))p->cp++;
+
+	endp = p->cp;
+
+	size_t len = endp-startp;
+	char *symbol = malloc(len+1);
+
+	
+	memcpy(symbol,startp,len);
+	symbol[len] = 0;
+	printf("\n\n symbol = %s\n\n",symbol);
+	//search symbol
+	tsymbol s = -1;
+	int build_in_count = 5; 
+    
+	//check symbol
+    for(int i = 0; i < build_in_count; i++){
+        
+
+        if (strcmp(build_in[i], symbol) == 0){
+            s = i;
+            break; 
+        }
+    }
+
+    if (s == -1) {
+        printf("Error: Symbol '%s' not recognized at line '%ld'\n", symbol, p->line);
+    }
+    
+    free(symbol); // free symbol
+    
+    return s;
+
+}
+
+char *parse_string(parser *p) {
+
+	p->cp++; 
+    char *startp = p->cp; 
+    
+    while(p->cp[0] != 0 && p->cp[0] != '\"') {
+        if(p->cp[0] == '\n') p->line++; // newline
+        p->cp++;
+    }
+
+    if(p->cp[0] == 0){
+        printf("Error: String not close started at line : %ld\n", p->line);
+        return NULL;
+    }
+    
+    char *endp = p->cp;
+    
+    size_t len = endp - startp; 
+
+    p->cp++; 
+    
+
+    char *string = malloc(len + 1);
+    if (!string) {
+         perror("Error allocating string");
+         return NULL;
+    }
+    memcpy(string, startp, len);
+    string[len] = 0;
+    
+    return string;
+}
 
 //Return stack pointer the freed up of the allocated object is in the main.
 stack *compile(parser *p){
 	stack *st = init();
-	puts(p->prg);
-	printf("%c\n",p->cp[0]);
+	printf("----file content = [%s] ----file size = %ld\n",p->prg,p->size);
+	printf("Start parsing\n");
+	while (p->cp[0] != 0) 
+	{	
+		if(p->cp[0]  == '\n')p->line++; //special case
+		//skipSpace
+		if(isspace(p->cp[0]))p->cp++;
+		//parse number
+		if(isdigit(p->cp[0]) || (p->cp[1] !=  0 && p->cp[0]=='-' && isdigit(p->cp[1]))) {
+			
+			int number = parse_number(p);
+			myobj *o =  create_number_obj(number);
+			push(st,o);
+			//puts("PARSE NUMBER\n");
 
+		}else if(isalpha(p->cp[0])) {
+			tsymbol symbol = parse_symbol(p);
+			if(symbol == -1){ //error
+				return st;
+			}
+			myobj *o = create_symbol_obj(symbol);
+			push(st,o);
+			
+		}else if(p->cp[0] == '\"') {
+			char *string = parse_string(p);
+			if(string == NULL) {
+				return st;
+			}
+			myobj *o = create_string_obj(string);
+			push(st,o);
+			free(string);
+		}
+			
+	}
+	
 	return st;
 }
 
@@ -183,7 +314,7 @@ int main(int argc, char const *argv[])
 		stack *st;
 		st = compile(par);
 		if(!st){//some error occurr.
-			return NULL;
+			return 0;
 		}
 
 		//compile
