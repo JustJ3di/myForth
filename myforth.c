@@ -1,11 +1,10 @@
 #include <stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
 //#######################UTILITIES################################
 
-typedef enum {false,true}bool;
 
 //wrapper malloc and realloc
 void *xmalloc(size_t size){
@@ -335,6 +334,10 @@ stack *compile(parser *p){
 	return st;
 }
 
+
+
+//#################################EXEC################################################
+
 //utilities print stack 
 void print_stack(stack *st) { 
 	for (size_t i = 0; i <=  st->top ; i++) //for each element in the stack
@@ -398,6 +401,11 @@ void exec(stack *st){
 			case DOT:
 				printf("%d",data_stack[sp--]);
 				break;
+			case SWAP:
+				int swap1 = data_stack[sp--],swap2 = data_stack[sp--];
+				data_stack[++sp] = swap2;
+				data_stack[++sp] = swap1;
+				break;
 			case DUP:
 				int dup = data_stack[sp--];
 				data_stack[++sp] = dup;
@@ -436,6 +444,8 @@ int main(int argc, char const *argv[])
 		stack *st;
 		st = compile(par);
 		if(!st){//some error occurr.
+			free(par->prg);
+			free(par);
 			return 0;
 		}
 
