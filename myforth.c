@@ -289,7 +289,7 @@ stack *compile(parser *p){
 			}
 			
 			myobj *o = create_symbol_obj(symbol);
-			push(st,o);
+			push(st, o);
 			
 		}
 		if(p->cp[0] == '.'){
@@ -301,8 +301,20 @@ stack *compile(parser *p){
 		if(p->cp[0] == '+'){
 
 			myobj *o = create_symbol_obj(SUM);
-			push(st,o);
+			push(st, o);
 
+		}
+		if(p->cp[0] == '-'){
+			myobj *o = create_symbol_obj(SUB);
+			push(st, o);
+		}
+		if(p->cp[0] == '*'){
+			myobj *o = create_symbol_obj(MUL);
+			push(st, o);
+		}
+		if(p->cp[0] == '/'){
+			myobj *o = create_symbol_obj(DIV);
+			push(st, o);
 		}
 		if(p->cp[0] == '\"') {
 			
@@ -349,8 +361,8 @@ void print_stack(stack *st) {
 
 void exec(stack *st){
 
-	print_stack(st);// call utilities
-	int *data_stack = xmalloc(sizeof(*data_stack) *st->top);
+	//print_stack(st);// call utilities
+	int *data_stack = xmalloc(sizeof(*data_stack) *(st->top+1)); //stack of integer to perform operation.
 	memset(data_stack,0,st->top);
 	int sp = -1;
 	for (size_t i = 0; i <= st->top ; i++)
@@ -365,9 +377,23 @@ void exec(stack *st){
 				data_stack[++sp] = sum;
 				break;
 			case SUB:
-				int a = data_stack[sp--];
-				int sub = data_stack[sp--] - a;
+				int s = data_stack[sp--];
+				int sub = data_stack[sp--] - s;
 				data_stack[++sp] = sub;	
+				break;
+			case DIV:
+				int d = data_stack[sp--];
+				if(d == 0){
+					printf("Error: divison by zero\n");
+					return;
+				}
+				int div = data_stack[sp--] / d;
+				data_stack[++sp] = div;
+				break;
+			case MUL:
+				int mul = data_stack[sp--] * data_stack[sp--];
+				data_stack[++sp] = mul;
+				break;
 				break;
 			case DOT:
 				printf("%d",data_stack[sp--]);
