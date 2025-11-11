@@ -31,11 +31,11 @@ void *xrealloc(void *p,size_t size){
 }
 //#######################OBJECT TYPE################################
 //
-#define SYMBOLS 13 //number of symbol
-typedef enum {SUM, SUB ,DIV ,MUL, PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT} tsymbol; 
-const char *build_in[] = {"+", "-", "/", "*", "print", "dup", "swap", "cr", "over", "rot", "drop", "emit", "."};
+#define SYMBOLS 14 //number of symbol
+typedef enum {ADD, SUB ,DIV ,MUL, MOD, ABS,PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT} tsymbol; 
+const char *build_in[] = {"+", "-", "/", "*", "mod", "abs","print", "dup", "swap", "cr", "over", "rot", "drop", "emit", "."};
 enum{SYMBOL, NUMBER, STRING, VAR};
-typedef struct myobj myobj;
+
 typedef struct myobj{
 
 	unsigned  type;
@@ -299,7 +299,7 @@ stack *compile(parser *p){
 		}
 		if(p->cp[0] == '+'){
 
-			myobj *o = create_symbol_obj(SUM);
+			myobj *o = create_symbol_obj(ADD);
 			push(st, o);
 
 		}
@@ -375,7 +375,7 @@ void exec(stack *st){
 		case SYMBOL:
 			switch (st->ptr[i]->i)
 			{
-			case SUM:
+			case ADD:
 				int sum = data_stack[sp--] + data_stack[sp--];
 				data_stack[++sp] = sum;
 				break;
@@ -397,19 +397,43 @@ void exec(stack *st){
 				int mul = data_stack[sp--] * data_stack[sp--];
 				data_stack[++sp] = mul;
 				break;
+			case MOD:
+				int m = data_stack[sp--];
+					if(m == 0){
+						printf("Error: divison by zero\n");
+						return;
+					}
+				int mod = data_stack[sp--]%m;
+				data_stack[++sp] = mod;
+				break;
+			case ABS:
+				{
+					int a = data_stack[sp--];
+					data_stack[++sp] =  a > 0 ? a : -1* a;
+				}
 				break;
 			case DOT:
 				printf("%d",data_stack[sp--]);
 				break;
 			case SWAP:
-				int swap1 = data_stack[sp--],swap2 = data_stack[sp--];
-				data_stack[++sp] = swap2;
-				data_stack[++sp] = swap1;
+				{
+				int a = data_stack[sp--],b = data_stack[sp--];
+				data_stack[++sp] = b;
+				data_stack[++sp] = a;
+				}
 				break;
 			case DUP:
-				int dup = data_stack[sp--];
-				data_stack[++sp] = dup;
-				data_stack[++sp] = dup;
+				{
+					int a = data_stack[sp--];
+					data_stack[++sp] = a;
+					data_stack[++sp] = a;
+				}
+				break;
+			case OVER:
+				{
+					int a = data_stack[sp--],b = data_stack[sp--];
+					data_stack[++sp] = a;data_stack[++sp] = b;data_stack[++sp] = a;
+				}
 				break;
 			case EMIT:
 				char ch = data_stack[sp--];
@@ -426,9 +450,11 @@ void exec(stack *st){
 				break;
 			}
 			break;
-		
-		default:
-			data_stack[++sp] = st->ptr[i]->i;
+		case NUMBER:
+			data_stack[++sp] = st->ptr[i]->i ;
+			break;
+		default://if is not a symbol its a number so push to the stack
+
 			break;
 		} 
 		
