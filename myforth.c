@@ -31,7 +31,7 @@ void *xrealloc(void *p,size_t size){
 }
 //#######################OBJECT TYPE################################
 //
-#define SYMBOLS 11 //number of symbol
+#define SYMBOLS 13 //number of symbol
 typedef enum {SUM, SUB ,DIV ,MUL, PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT} tsymbol; 
 const char *build_in[] = {"+", "-", "/", "*", "print", "dup", "swap", "cr", "over", "rot", "drop", "emit", "."};
 enum{SYMBOL, NUMBER, STRING, VAR};
@@ -411,8 +411,15 @@ void exec(stack *st){
 				data_stack[++sp] = dup;
 				data_stack[++sp] = dup;
 				break;
+			case EMIT:
+				char ch = data_stack[sp--];
+				printf("%c",ch);
+				break;
 			case CR:
 				putchar('\n');
+				break;
+			case DROP:
+				sp--;
 				break;
 			
 			default:
