@@ -31,9 +31,9 @@ void *xrealloc(void *p,size_t size){
 }
 //#######################OBJECT TYPE################################
 //
-#define SYMBOLS 14 //number of symbol
-typedef enum {ADD, SUB ,DIV ,MUL, MOD, ABS,PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT} tsymbol; 
-const char *build_in[] = {"+", "-", "/", "*", "mod", "abs","print", "dup", "swap", "cr", "over", "rot", "drop", "emit", "."};
+#define SYMBOLS 19 //number of symbol
+typedef enum {ADD, SUB ,DIV ,MUL, MOD, ABS,PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT , IF, ELSE, THEN, LT, GT } tsymbol; 
+const char *build_in[] = {"+", "-", "/", "*", "mod", "abs","print", "dup", "swap", "cr", "over", "rot", "drop", "emit", ".", "if", "else", "then","<",">"};
 enum{SYMBOL, NUMBER, STRING, VAR};
 
 typedef struct myobj{
@@ -315,6 +315,14 @@ stack *compile(parser *p){
 			myobj *o = create_symbol_obj(DIV);
 			push(st, o);
 		}
+		if(p->cp[0] == '<'){
+			myobj *o = create_symbol_obj(LT);
+			push(st, o);
+		}
+		if(p->cp[0] == '>'){
+			myobj *o = create_symbol_obj(GT);
+			push(st, o);
+		}
 		if(p->cp[0] == '\"') {
 			
 			char *string = parse_string(p);
@@ -376,26 +384,34 @@ void exec(stack *st){
 			switch (st->ptr[i]->i)
 			{
 			case ADD:
-				int sum = data_stack[sp--] + data_stack[sp--];
-				data_stack[++sp] = sum;
+				{
+					int n = data_stack[sp--] + data_stack[sp--];
+					data_stack[++sp] = n;
+				}
 				break;
 			case SUB:
-				int s = data_stack[sp--];
-				int sub = data_stack[sp--] - s;
-				data_stack[++sp] = sub;	
+				{
+					int n1 = data_stack[sp--];
+					int n2 = data_stack[sp--] - n1;
+					data_stack[++sp] = n2;	
+				}
 				break;
 			case DIV:
-				int d = data_stack[sp--];
-				if(d == 0){
-					printf("Error: divison by zero\n");
-					return;
+				{
+					int n1 = data_stack[sp--];
+					if(n1 == 0){
+						printf("Error: divison by zero\n");
+						return;
+					}
+					int n2 = data_stack[sp--] / n1;
+					data_stack[++sp] = n2;
 				}
-				int div = data_stack[sp--] / d;
-				data_stack[++sp] = div;
 				break;
 			case MUL:
-				int mul = data_stack[sp--] * data_stack[sp--];
-				data_stack[++sp] = mul;
+				{
+					int a = data_stack[sp--] * data_stack[sp--];
+					data_stack[++sp] = a;
+				}
 				break;
 			case MOD:
 				int m = data_stack[sp--];
@@ -409,7 +425,7 @@ void exec(stack *st){
 			case ABS:
 				{
 					int a = data_stack[sp--];
-					data_stack[++sp] =  a > 0 ? a : -1* a;
+					data_stack[++sp] =  (a > 0 ? a : -1* a);
 				}
 				break;
 			case DOT:
@@ -436,8 +452,10 @@ void exec(stack *st){
 				}
 				break;
 			case EMIT:
-				char ch = data_stack[sp--];
-				printf("%c",ch);
+				{
+					char ch = data_stack[sp--];
+					printf("%c",ch);
+				}
 				break;
 			case CR:
 				putchar('\n');
@@ -445,7 +463,31 @@ void exec(stack *st){
 			case DROP:
 				sp--;
 				break;
-			
+			            case LT: // < : n1 n2 -- flag (True if n1 < n2)
+                { 
+                    if (sp < 1) { printf("Error: Stack underflow for <\n"); return; }
+                    int n2 = data_stack[sp--]; // TOS
+                    int n1 = data_stack[sp--]; // NOS
+                    data_stack[++sp] = n1 < n2 ? 1 : 0; // 1 for True, 0 for False
+                }
+                break;
+            case GT: // > : n1 n2 -- flag (True if n1 > n2)
+                { 
+                    if (sp < 1) { printf("Error: Stack underflow for >\n"); return; }
+                    int n2 = data_stack[sp--]; // TOS
+                    int n1 = data_stack[sp--]; // NOS
+                    data_stack[++sp] = n1 > n2 ? 1 : 0; // 1 for True, 0 for False
+                }
+                break;
+			case IF:
+
+				break;
+			case ELSE:
+
+				break;
+			case THEN:
+
+				break;
 			default:
 				break;
 			}
@@ -453,7 +495,7 @@ void exec(stack *st){
 		case NUMBER:
 			data_stack[++sp] = st->ptr[i]->i ;
 			break;
-		default://if is not a symbol its a number so push to the stack
+		default:
 
 			break;
 		} 
@@ -482,7 +524,8 @@ int main(int argc, char const *argv[])
 			return 0;
 		}
 
-		
+		print_stack(st);
+
 		exec(st);
 
 		delete(st);
