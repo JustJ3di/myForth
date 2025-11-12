@@ -376,6 +376,7 @@ void exec(stack *st){
 	int *data_stack = xmalloc(sizeof(*data_stack) *(st->top+1)); //stack of integer to perform operation.
 	memset(data_stack,0,st->top);
 	int sp = -1;
+	int if_count = 0;
 	for (size_t i = 0; i <= st->top ; i++)
 	{
 		switch (st->ptr[i]->type)
@@ -479,15 +480,40 @@ void exec(stack *st){
                     data_stack[++sp] = n1 > n2 ? 1 : 0; // 1 for True, 0 for False
                 }
                 break;
-			case IF:
+ 			case IF: {
+                if (sp < 0) { printf("Error: Stack underflow before IF\n"); return; }
+                int cond = data_stack[sp--];
+                if (cond == 0) {
+                    // jump to else or then
+                    int depth = 1;
+                    while (++i <= st->top && depth > 0) {
+                        if (st->ptr[i]->type == SYMBOL) {
+                            if (st->ptr[i]->i == IF) depth++;
+                            else if (st->ptr[i]->i == ELSE && depth == 1) break;
+                            else if (st->ptr[i]->i == THEN && depth == 1) { depth = 0; break; }
+                            else if (st->ptr[i]->i == THEN) depth--;
+                        }
+                    }
+                }
+            } break;
 
-				break;
-			case ELSE:
+            case ELSE: {
+                // jump on then
+                int depth = 1;
+                while (++i <= st->top && depth > 0) {
+                    if (st->ptr[i]->type == SYMBOL && st->ptr[i]->i == THEN && depth == 1)
+                        break;
+                    else if (st->ptr[i]->type == SYMBOL && st->ptr[i]->i == IF)
+                        depth++;
+                    else if (st->ptr[i]->type == SYMBOL && st->ptr[i]->i == THEN)
+                        depth--;
+                }
+            } break;
 
-				break;
-			case THEN:
+            case THEN:
+                //do nothing
+                break;
 
-				break;
 			default:
 				break;
 			}
