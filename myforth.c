@@ -31,9 +31,9 @@ void *xrealloc(void *p,size_t size){
 }
 //#######################OBJECT TYPE################################
 //
-#define SYMBOLS 19 //number of symbol
-typedef enum {ADD, SUB ,DIV ,MUL, MOD, ABS,PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT , IF, ELSE, THEN, LT, GT } tsymbol; 
-const char *build_in[] = {"+", "-", "/", "*", "mod", "abs","print", "dup", "swap", "cr", "over", "rot", "drop", "emit", ".", "if", "else", "then","<",">"};
+#define SYMBOLS 20 //number of symbol
+typedef enum {ADD, SUB ,DIV ,MUL, MOD, ABS,PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT , IF, ELSE, THEN, LT, GT, MIN, MAX} tsymbol; 
+const char *build_in[] = {"+", "-", "/", "*", "mod", "abs","print", "dup", "swap", "cr", "over", "rot", "drop", "emit", ".", "if", "else", "then", "<", ">", "min", "max"};
 enum{SYMBOL, NUMBER, STRING, VAR};
 
 typedef struct myobj{
@@ -513,7 +513,19 @@ void exec(stack *st){
             case THEN:
                 //do nothing
                 break;
-
+			case MIN:
+				if(sp<0){printf("Stack underflow on min");}
+				{
+					int top = data_stack[sp--],tos = data_stack[sp--];
+					data_stack[++sp] = (top < tos ? top : tos);
+				}
+				break;
+			case MAX:
+				if(sp<0){printf("Stack underflow on max");}
+				{
+					int top = data_stack[sp--],tos = data_stack[sp--];
+					data_stack[++sp] = (top > tos ? top : tos);
+				}
 			default:
 				break;
 			}
