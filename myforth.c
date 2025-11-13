@@ -31,9 +31,9 @@ void *xrealloc(void *p,size_t size){
 }
 //#######################OBJECT TYPE################################
 //
-#define SYMBOLS 20 //number of symbol
-typedef enum {ADD, SUB ,DIV ,MUL, MOD, ABS,PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT , IF, ELSE, THEN, LT, GT, MIN, MAX} tsymbol; 
-const char *build_in[] = {"+", "-", "/", "*", "mod", "abs","print", "dup", "swap", "cr", "over", "rot", "drop", "emit", ".", "if", "else", "then", "<", ">", "min", "max"};
+#define SYMBOLS 22 //number of symbol
+typedef enum {ADD, SUB ,DIV ,MUL, MOD, ABS,PRINT, DUP, SWAP, CR, OVER, ROT, DROP, EMIT , DOT , IF, ELSE, THEN, LT, GT, MIN, MAX, EQ} tsymbol; 
+const char *build_in[] = {"+", "-", "/", "*", "mod", "abs","print", "dup", "swap", "cr", "over", "rot", "drop", "emit", ".", "if", "else", "then", "<", ">", "min", "max", "="};
 enum{SYMBOL, NUMBER, STRING, VAR};
 
 typedef struct myobj{
@@ -323,6 +323,10 @@ stack *compile(parser *p){
 			myobj *o = create_symbol_obj(GT);
 			push(st, o);
 		}
+		if(p->cp[0] == '='){
+			myobj *o = create_symbol_obj(EQ);
+			push(st, o);
+		}
 		if(p->cp[0] == '\"') {
 			
 			char *string = parse_string(p);
@@ -464,39 +468,45 @@ void exec(stack *st){
 			case DROP:
 				sp--;
 				break;
-			            case LT: // < : n1 n2 -- flag (True if n1 < n2)
+			case LT: // < : n1 n2 -- flag (True if n1 < n2)
                 { 
-                    if (sp < 1) { printf("Error: Stack underflow for <\n"); return; }
+                    if (sp < 2) { printf("Error: Stack underflow for <\n"); return; }
                     int n2 = data_stack[sp--]; // TOS
                     int n1 = data_stack[sp--]; // NOS
-                    data_stack[++sp] = n1 < n2 ? 1 : 0; // 1 for True, 0 for False
+                    data_stack[++sp] = n1 < n2;
                 }
                 break;
-            case GT: // > : n1 n2 -- flag (True if n1 > n2)
+            case GT: 
                 { 
-                    if (sp < 1) { printf("Error: Stack underflow for >\n"); return; }
+                    if (sp < 2) { printf("Error: Stack underflow for >\n"); return; }
                     int n2 = data_stack[sp--]; // TOS
                     int n1 = data_stack[sp--]; // NOS
-                    data_stack[++sp] = n1 > n2 ? 1 : 0; // 1 for True, 0 for False
+                    data_stack[++sp] = n1 > n2;
                 }
                 break;
+			case EQ:
+				{	
+					if(sp<2){printf("error stack underflow for = \n");}
+					data_stack[++sp] == data_stack[sp--] == data_stack[sp--];
+				}
+				break;
  			case IF: {
                 if (sp < 0) { printf("Error: Stack underflow before IF\n"); return; }
                 int cond = data_stack[sp--];
                 if (cond == 0) {
-                    // jump to else or then
-                    int depth = 1;
-                    while (++i <= st->top && depth > 0) {
-                        if (st->ptr[i]->type == SYMBOL) {
-                            if (st->ptr[i]->i == IF) depth++;
-                            else if (st->ptr[i]->i == ELSE && depth == 1) break;
-                            else if (st->ptr[i]->i == THEN && depth == 1) { depth = 0; break; }
-                            else if (st->ptr[i]->i == THEN) depth--;
-                        }
-                    }
-                }
-            } break;
-
+						// jump to else or then
+						int depth = 1;
+						while (++i <= st->top && depth > 0) {
+							if (st->ptr[i]->type == SYMBOL) {
+								if (st->ptr[i]->i == IF) depth++;
+								else if (st->ptr[i]->i == ELSE && depth == 1) break;
+								else if (st->ptr[i]->i == THEN && depth == 1) { depth = 0; break; }
+								else if (st->ptr[i]->i == THEN) depth--;
+							}
+						}
+					}
+				} 
+				break;
             case ELSE: {
                 // jump on then
                 int depth = 1;
