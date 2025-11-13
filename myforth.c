@@ -526,6 +526,17 @@ void exec(stack *st){
 					int top = data_stack[sp--],tos = data_stack[sp--];
 					data_stack[++sp] = (top > tos ? top : tos);
 				}
+				break;
+			case PRINT:
+				{	
+					if(st->ptr[i-1]->type == STRING){
+						puts(st->ptr[i-1]->str.ptr);
+					}
+					else{
+						printf("ERROR No string to print\n");
+					}
+				}
+				break;
 			default:
 				break;
 			}
