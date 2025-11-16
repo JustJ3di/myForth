@@ -6,7 +6,7 @@
 //#######################UTILITIES################################
 
 
-//wrapper malloc and realloc
+//wrapper malloc
 void *xmalloc(size_t size){
 	void *p = malloc(size);
 	if(p) {
@@ -18,7 +18,7 @@ void *xmalloc(size_t size){
 		exit(EXIT_FAILURE);
 	}
 }
-
+//wrapper realloc
 void *xrealloc(void *p,size_t size){
 	void *n = realloc(p,size);
 	if(n)
@@ -373,10 +373,44 @@ void print_stack(stack *st) {
 }
 
 
+typedef struct {
+
+	int *data_stack;
+	unsigned data_size; //size data_stack
+	unsigned pc; //program counter
+	struct {
+		unsigned *jump_table;
+		unsigned current_jump;
+		unsigned last_jump;
+		unsigned size_jumps_addess;
+	}jump;
+
+}env;
+
+env *create_env(unsigned data_size){
+	env *ct = xmalloc(sizeof(*ct)); //allocate context
+	ct->data_size = data_size;
+	ct->data_stack = xmalloc(sizeof(ct->data_stack[0])*ct->data_size); //allocate data_stack
+	ct->pc = 0;//set the pc
+	ct->jump.jump_table = xmalloc(sizeof(ct->jump.jump_table[0])); //allocate jump table [pc,pc_to_jump]
+	ct->jump.last_jump = ct->jump.current_jump = ct->jump.size_jumps_addess = 0;  //last_jump,_current_jump, size to jump table
+	return ct;	
+}
+
+void delete_env(env *ct){
+
+	free(ct->jump.jump_table);
+	free(ct->data_stack);
+	free(ct);
+
+}
+
 
 void exec(stack *st){
 
 	//print_stack(st);// call utilities
+	env *ct = create_env(st->top);//create env
+
 	int *data_stack = xmalloc(sizeof(*data_stack) *(st->top+1)); //stack of integer to perform operation.
 	memset(data_stack,0,st->top);
 	int sp = -1;
@@ -562,6 +596,8 @@ void exec(stack *st){
 	}
 		
 	free(data_stack);
+
+	delete_env(ct);
 	
 }
 
