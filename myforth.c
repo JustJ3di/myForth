@@ -169,6 +169,7 @@ parser *init_parser(const char *filename){
 int parse_number(parser *p){
 	char *startp = p->cp;
 	char* endp = NULL;  // This will point to end of string.
+	if(p->cp[0]  == '-')p->cp++;
 	while(isdigit(p->cp[0]))p->cp++;
 
 	endp = p->cp;
